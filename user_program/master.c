@@ -79,7 +79,7 @@ int main (int argc, char* argv[])
 			}
 			break;
 	}
-	//ioctl(dev_fd, 1337); // trigger default case to display contents of page descriptor
+	ioctl(dev_fd, 1337, 0); // trigger default case to display contents of page descriptor
 
 	if(ioctl(dev_fd, 0x12345679) == -1) // end sending data, close the connection
 	{

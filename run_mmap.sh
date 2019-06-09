@@ -24,14 +24,14 @@ wait
 echo Diff of file3 on mmap/mmap:
 diff data/file3_in data/file3_out
 wait
-
+<<@@
 user_program/master data/file4_in mmap >> log_master &
 user_program/slave data/file4_out mmap 127.0.0.1 >> log_slave &
 wait
 echo Diff of file4 on mmap/mmap:
 diff data/file4_in data/file4_out
 wait
-
+@@
 echo
 echo Log of Master:
 cat log_master
