@@ -1,8 +1,5 @@
-<<@
-Usage:
-sudo -i
-./run.sh
-@
+# Usage: sudo ./run_fcntl.sh
+
 # Reference: Bash script processing limited number of commands in parallel
 # https://stackoverflow.com/posts/19543185/revisions
 

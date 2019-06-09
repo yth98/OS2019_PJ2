@@ -31,6 +31,7 @@
 
 
 #define BUF_SIZE 512
+#define MAP_SIZE PAGE_SIZE * 100 // mmap
 
 
 
@@ -59,8 +60,37 @@ static mm_segment_t old_fs;
 static ksocket_t sockfd_cli;//socket to the master server
 static struct sockaddr_in addr_srv; //address of the master server
 
+void mmap_open(struct vm_area_struct *vma) {}
+void mmap_close(struct vm_area_struct *vma) {}
+static int mmap_fault(struct vm_fault *vmf) // there's no *vma parameter now!
+{
+	vmf->page = virt_to_page(vmf->vma->vm_private_data);
+	get_page(vmf->page);
+	return 0;
+}
+
+static struct vm_operations_struct my_vm_ops = {
+	.open = mmap_open,
+	.close = mmap_close,
+	.fault = mmap_fault
+};
+
+static int remap_mmap(struct file *file, struct vm_area_struct *vma)
+{
+	io_remap_pfn_range(vma,
+		vma->vm_start,
+		virt_to_phys(file->private_data) >> PAGE_SHIFT,
+        vma->vm_end - vma->vm_start,
+		vma->vm_page_prot);
+	vma->vm_ops = &my_vm_ops;
+	vma->vm_flags |= VM_RESERVED;
+	vma->vm_private_data = file->private_data;
+	return 0;
+}
+
 //file operations
 static struct file_operations slave_fops = {
+	.mmap = remap_mmap, // mmap
 	.owner = THIS_MODULE,
 	.unlocked_ioctl = slave_ioctl,
 	.open = slave_open,
@@ -82,11 +112,11 @@ static int __init slave_init(void)
 
 	//register the device
 	if( (ret = misc_register(&slave_dev)) < 0){
-		printk(KERN_ERR "misc_register failed!\n");
+		printk(KERN_ERR "[PJ2] misc_register failed!\n");
 		return ret;
 	}
 
-	printk(KERN_INFO "slave has been registered!\n");
+	printk(KERN_INFO "[PJ2] slave has been registered!\n");
 
 	return 0;
 }
@@ -94,18 +124,20 @@ static int __init slave_init(void)
 static void __exit slave_exit(void)
 {
 	misc_deregister(&slave_dev);
-	printk(KERN_INFO "slave exited!\n");
+	printk(KERN_INFO "[PJ2] slave exited!\n");
 	debugfs_remove(file1);
 }
 
 
 int slave_close(struct inode *inode, struct file *filp)
 {
+	kfree(filp->private_data); // mmap
 	return 0;
 }
 
 int slave_open(struct inode *inode, struct file *filp)
 {
+	filp->private_data = kmalloc(MAP_SIZE, GFP_KERNEL); // mmap
 	return 0;
 }
 static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long ioctl_param)
@@ -113,11 +145,11 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 	long ret = -EINVAL;
 
 	int addr_len ;
-	unsigned int i;
-	size_t len, data_size = 0;
+	//unsigned int i;
+	size_t len, data_size = 0; // mmap slave_IOCTL_MMAP
 	char *tmp, ip[20], buf[BUF_SIZE];
-	struct page *p_print;
-	unsigned char *px;
+	//struct page *p_print; // display the whole content of page descriptors?
+	//unsigned char *px;
 
     pgd_t *pgd;
 	p4d_t *p4d;
@@ -127,11 +159,11 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
 
-    printk("slave device ioctl");
+    printk("[PJ2] slave device ioctl");
 
 	switch(ioctl_num){
 		case slave_IOCTL_CREATESOCK:// create socket and connect to master
-            printk("slave device ioctl create socket");
+            printk("[PJ2] slave device ioctl create socket");
 
 			if(copy_from_user(ip, (char*)ioctl_param, sizeof(ip)))
 				return -ENOMEM;
@@ -145,31 +177,37 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			addr_len = sizeof(struct sockaddr_in);
 
 			sockfd_cli = ksocket(AF_INET, SOCK_STREAM, 0);
-			printk("sockfd_cli = 0x%p  socket is created\n", sockfd_cli);
+			printk("[PJ2] sockfd_cli = 0x%p  socket is created\n", sockfd_cli);
 			if (sockfd_cli == NULL)
 			{
-				printk("socket failed\n");
+				printk("[PJ2] socket failed\n");
 				return -1;
 			}
 			if (kconnect(sockfd_cli, (struct sockaddr*)&addr_srv, addr_len) < 0)
 			{
-				printk("connect failed\n");
+				printk("[PJ2] connect failed\n");
 				return -1;
 			}
 			tmp = inet_ntoa(&addr_srv.sin_addr);
-			printk("connected to : %s %d\n", tmp, ntohs(addr_srv.sin_port));
+			printk("[PJ2] connected to : %s %d\n", tmp, ntohs(addr_srv.sin_port));
 			kfree(tmp);
-			printk("kfree(tmp)");
+			printk("[PJ2] kfree(tmp)");
 			ret = 0;
 			break;
 		case slave_IOCTL_MMAP:
-
+			while (1) { // mmap
+				len = krecv(sockfd_cli, buf, sizeof(buf), 0);
+				if (len == 0)
+					break;
+				memcpy(file->private_data + data_size, buf, len);
+				data_size += len;
+			}
+			ret = data_size;
 			break;
-
 		case slave_IOCTL_EXIT:
 			if(kclose(sockfd_cli) == -1)
 			{
-				printk("kclose cli error\n");
+				printk("[PJ2] kclose cli error\n");
 				return -1;
 			}
 			ret = 0;
@@ -181,7 +219,7 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			pmd = pmd_offset(pud, ioctl_param);
 			ptep = pte_offset_kernel(pmd , ioctl_param);
 			pte = *ptep;
-			printk("slave: %lX\n", pte);
+			printk("[PJ2] slave: %lX\n", pte);
 			ret = 0;
 			break;
 	}

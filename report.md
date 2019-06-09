@@ -6,11 +6,8 @@
 ### How to Run
 
     sudo ./compile.sh
-    sudo -i
-    cd `...`
-    ./run.sh
-
-    logout
+    sudo ./run_fcntl.sh
+    sudo ./run_mmap.sh
     sudo ./clean.sh
 
 ## 執行結果 The Result

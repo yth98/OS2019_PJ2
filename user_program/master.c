@@ -11,6 +11,7 @@
 
 #define PAGE_SIZE 4096
 #define BUF_SIZE 512
+#define MAP_SIZE PAGE_SIZE * 100 // mmap
 size_t get_filesize(const char* filename);//get the size of the input file
 
 
@@ -18,9 +19,9 @@ int main (int argc, char* argv[])
 {
 	char buf[BUF_SIZE];
 	int i, dev_fd, file_fd;// the fd for the device and the fd for the input file
-	size_t ret, file_size, offset = 0, tmp;
+	size_t ret, file_size, offset = 0;//, tmp;
 	char file_name[50], method[20];
-	char *kernel_address = NULL, *file_address = NULL;
+	char *kernel_address = NULL, *file_address = NULL; // mmap
 	struct timeval start;
 	struct timeval end;
 	double trans_time; //calulate the time between the device is opened and it is closed
@@ -65,16 +66,29 @@ int main (int argc, char* argv[])
 				write(dev_fd, buf, ret);//write to the the device
 			}while(ret > 0);
 			break;
+		case 'm': //mmap : mmap(),memcpy()
+			while (offset < file_size) {
+				size_t length = MAP_SIZE;
+				if ((file_size - offset) < length)
+					length = file_size - offset;
+				file_address = mmap(NULL, length, PROT_READ, MAP_SHARED, file_fd, offset);
+				kernel_address = mmap(NULL, length, PROT_WRITE, MAP_SHARED, dev_fd, offset);
+				memcpy(kernel_address, file_address, length);
+				offset += length;
+				ioctl(dev_fd, 0x12345678, length);
+			}
+			break;
 	}
+	//ioctl(dev_fd, 1337); // trigger default case to display contents of page descriptor
 
 	if(ioctl(dev_fd, 0x12345679) == -1) // end sending data, close the connection
 	{
-		perror("ioclt server exits error\n");
+		perror("ioctl server exits error\n");
 		return 1;
 	}
 	gettimeofday(&end, NULL);
 	trans_time = (end.tv_sec - start.tv_sec)*1000 + (end.tv_usec - start.tv_usec)*0.0001;
-	printf("Transmission time: %lf ms, File size: %d bytes\n", trans_time, file_size / 8);
+	printf("Transmission time: %lf ms, File size: %ld bytes\n", trans_time, file_size);
 
 	close(file_fd);
 	close(dev_fd);
