@@ -10,11 +10,7 @@
     sudo ./run_mmap.sh
     sudo ./clean.sh
 
-run_fcntl and run_mmap will access the master program to read the four .in files and access the slave program to write them to the four .out files sequencially by the method of fcntl or mmap respectively.
-
-
-### Implementation of memory-mapped I/O
-(some details on how we implement memory-mapped I/O)
+run_fcntl and run_mmap will access the master program to read the four .in files and access the slave program to write them to the four .out files sequencially by the method of fcntl or mmap respectively, which is quite convenient to collect all result at once.
 
 
 ## 執行結果 The Result
@@ -22,46 +18,38 @@ run_fcntl and run_mmap will access the master program to read the four .in files
 ```
 Log of Master:
 Transmission time: 0.018100 ms, File size: 32 bytes
-(page descriptors output of file1)
 Transmission time: 0.057100 ms, File size: 4619 bytes
-(page descriptors output of file2)
 Transmission time: 0.094800 ms, File size: 77566 bytes
-(page descriptors output of file3)
 Transmission time: 12.240700 ms, File size: 12022885 bytes
-(page descriptors output of file4)
 
 Log of Slave:
 Transmission time: 0.091500 ms, File size: 32 bytes
-(page descriptors output of file1)
 Transmission time: 0.085200 ms, File size: 4619 bytes
-(page descriptors output of file2)
 Transmission time: 0.425000 ms, File size: 77566 bytes
-(page descriptors output of file3)
 Transmission time: 15.113500 ms, File size: 12022885 bytes
-(page descriptors output of file4)
 ```
 
 ### mmap
 ```
 Log of Master:
 Transmission time: 0.018400 ms, File size: 32 bytes
-(page descriptors output of file1)
+[  763.441686] [PJ2] master: 8000000058600267
 Transmission time: 0.045600 ms, File size: 4619 bytes
-(page descriptors output of file2)
+[  763.455095] [PJ2] master: 8000000058680267
 Transmission time: 0.058500 ms, File size: 77566 bytes
-(page descriptors output of file3)
-(Transmission time and File size output of file4)
-(page descriptors output of file4)
+[  763.466013] [PJ2] master: 8000000058680267
+Transmission time: 3.501100 ms, File size: 12022885 bytes
+[  763.467215] [PJ2] master: 8000000058680267
 
 Log of Slave:
 Transmission time: 0.092700 ms, File size: 32 bytes
-(page descriptors output of file1)
+[  763.443435] [PJ2] slave: 8000000058680225
 Transmission time: 0.164700 ms, File size: 4619 bytes
-(page descriptors output of file2)
+[  763.457700] [PJ2] slave: 8000000058600225
 Transmission time: 0.087800 ms, File size: 77566 bytes
-(page descriptors output of file3)
-(Transmission time and File size output of file4)
-(page descriptors output of file4)
+[  763.472651] [PJ2] slave: 8000000058600225
+Transmission time: 8.833100 ms, File size: 12022885 bytes
+[  763.475611] [PJ2] slave: 8000000058600225
 ```
 
 ## 效能比較 Performance Comparison
@@ -92,7 +80,3 @@ In fact, the transmission time in file1 and file2 varies in a range every time w
 - B05902028： Debugging
 
 - B06901031： Major part of the code
-
-
-
-
