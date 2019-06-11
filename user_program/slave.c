@@ -61,6 +61,7 @@ int main (int argc, char* argv[])
 			}while(ret > 0);
 			break;
 		case 'm'://mmap : mmap(),memcpy()
+            kernel_address = mmap(NULL, MAP_SIZE, PROT_READ, MAP_SHARED, dev_fd, 0);
 			while (1) {
 				ret = ioctl(dev_fd, 0x12345678);
 				if (ret == 0) {
@@ -69,15 +70,14 @@ int main (int argc, char* argv[])
 				}
 				posix_fallocate(file_fd, data_size, ret);
 				file_address = mmap(NULL, ret, PROT_WRITE, MAP_SHARED, file_fd, data_size);
-				kernel_address = mmap(NULL, ret, PROT_READ, MAP_SHARED, dev_fd, data_size);
 				memcpy(file_address, kernel_address, ret);
+                munmap(file_address, ret);
 				data_size += ret;
 			}
+            ioctl(dev_fd, 0x8763, kernel_address);
+            munmap(kernel_address, MAP_SIZE);
 			break;
 	}
-	ioctl(dev_fd, 1337, 0); // trigger default case to display contents of page descriptor
-
-
 
 	if(ioctl(dev_fd, 0x12345679) == -1)// end receiving data, close the connection
 	{
@@ -93,5 +93,3 @@ int main (int argc, char* argv[])
 	close(dev_fd);
 	return 0;
 }
-
-

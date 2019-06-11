@@ -214,16 +214,12 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 			ret = 0;
 			break;
 		default:
-            pgd = pgd_offset(current->mm, ioctl_param);
-			if (pgd_none(*pgd) || pgd_bad(*pgd)) break;
-			/*p4d = p4d_offset(pgd, ioctl_param);
-			if (p4d_none(*p4d) || p4d_bad(*p4d)) break;
+			pgd = pgd_offset(current->mm, ioctl_param);
+			p4d = p4d_offset(pgd, ioctl_param);
 			pud = pud_offset(p4d, ioctl_param);
-			if (pud_none(*pud) || pud_bad(*pud)) break;
 			pmd = pmd_offset(pud, ioctl_param);
-			if (pmd_none(*pmd) || pmd_bad(*pmd)) break;
 			ptep = pte_offset_kernel(pmd , ioctl_param);
-			pte = *ptep;*/
+			pte = *ptep;
 			printk("[PJ2] slave: %lX\n", pte);
 			ret = 0;
 			break;
