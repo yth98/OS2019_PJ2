@@ -82,17 +82,16 @@ Transmission time: 7.393000 ms, File size: 12022885 bytes
 ## 效能比較 Performance Comparison
 
 ### Comparison between fnctl and mmap
-It can be seen that when the file size gets larger, using mmap would be a lot faster. 
+It can be seen that fnctl is faster in the first two files. But when the file size gets larger, using mmap would be a lot faster. Also note that the transmission time in file 1 to 3 with mmap is quite close. This is because the size of map is set to be 409600 bytes. The sizes of file 1 to 3 are less than that so in these case only one map is needed.
 
 We have known that primitive I/O have an extra cost on coping files from page cache to the target address, while memory-mapped I/O is able to directly access the file from the page cache by the map. However, mmap has a large overhead on setup/tear down overhead and page fault compared to fnctl. So when the file size is large enough for the cost of coping in fnctl to bypass the cost of overhead in mmap, memory-mapped I/O tends to work better.
 
-Note that primitive I/O usually doesn't suffer from page fault, while memory-mapped I/O does. So, say, if we need to access ramdom parts of the file frequently, mmap might waste a lot of time on the overhead. This is not the case here since we only need to access the file once from start to end.
+The disadvantage of using memory-mapped I/O can be seen in the first two cases, which are quite small files. Primitive I/O spent less than half of the time spent by memory-mapped I/O.
 
 ### Miscellaneous
-Theoretically in file1 primitive I/O would do better since memory-mapped I/O spend time seting up/tearing down. But there is little difference in the result. 
+Note that primitive I/O usually doesn't suffer from page fault, while memory-mapped I/O does. So, say, if we need to access ramdom parts of the file frequently, mmap might waste a lot of time on the overhead. This is not the case here since we only need to access the file once from start to end.
 
 In fact, the transmission time in file1 and file2 varies in a range every time we run it. Even two different machine would get a quite different result. This might be due to some scheduling issue when CPU deals with the program.
-
 
 
 
