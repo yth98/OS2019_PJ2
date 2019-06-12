@@ -202,6 +202,9 @@ static long slave_ioctl(struct file *file, unsigned int ioctl_num, unsigned long
 					break;
 				memcpy(file->private_data + data_size, buf, len);
 				data_size += len;
+				if(data_size >= MAP_SIZE){
+                    break;
+                }
 			}
 			ret = data_size;
 			break;
